@@ -1,0 +1,166 @@
+// single round of blackjack
+
+#include <string>
+#include <iostream>
+#include <array>
+#include <string_view>
+#include <cassert>
+#include <algorithm> // for std::shuffle
+#include "Random.h"  // for Random::mt
+
+struct Card{
+
+    enum Rank
+    {
+        rank_ace,
+        rank_2,
+        rank_3,
+        rank_4,
+        rank_5,
+        rank_6,
+        rank_7,
+        rank_8,
+        rank_9,
+        rank_10,
+        rank_jack,
+        rank_queen,
+        rank_king,
+    
+        max_ranks
+    };
+    
+    enum Suit
+    {
+        suit_club,
+        suit_diamond,
+        suit_heart,
+        suit_spade,
+
+        max_suits
+    };
+
+    Rank rank{};
+    Suit suit{};
+
+    static constexpr std::array<std::string_view, max_ranks> ranks{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
+    static constexpr std::array<std::string_view, max_suits> suits{"C", "D", "H", "S"};
+
+    static constexpr std::array<Rank, max_ranks> allRanks{
+        rank_ace, rank_2, rank_3, rank_4, rank_5, rank_6, rank_7, rank_8, rank_9, rank_10, rank_jack, rank_queen, rank_king
+    };
+
+    static constexpr std::array<Suit, max_suits> allSuits{
+        suit_club, suit_diamond, suit_heart, suit_spade
+    };
+
+    friend std::ostream& operator<<(std::ostream& out, const Card& card)
+    {
+        out << ranks[card.rank] << suits[card.suit];
+        return out;
+    }
+
+    int cardValue(){
+        static constexpr std::array valueRank{11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10};
+        return valueRank[rank];
+    }
+};
+
+class Deck{
+private:
+    std::array<Card, 52> m_cards{};
+    int m_cardNextIndex{};
+
+public:
+    Deck()
+    : m_cards{}
+        {
+            int index{0};
+        for (auto suit : Card::allSuits) {
+            for (auto rank : Card::allRanks){
+                m_cards[index] = Card{rank, suit};
+                ++index;
+            }
+        }
+    }
+
+    Card dealCard(){
+        assert(m_cardNextIndex != 52 && "Deck::dealCard ran out of cards");
+        return m_cards[m_cardNextIndex++];
+    }
+
+    void shuffle(){
+        std::shuffle(m_cards.begin(), m_cards.end(), Random::mt);
+        m_cardNextIndex = 0;
+    }
+};
+
+namespace Settings{
+    constexpr int playerBust{21};
+    constexpr int dealerStop{17};
+}
+
+struct Player{
+    int score{};
+};
+
+bool blackjack(Deck& deck){
+    deck.shuffle();
+
+    Player dealer{deck.dealCard().cardValue()};
+    std::cout << "The dealer is showing " << dealer.score << '\n';
+    Player player { deck.dealCard().cardValue() + deck.dealCard().cardValue() };
+    std::cout << "The player is showing " << player.score << '\n';
+
+    while(true){
+
+        if (player.score > Settings::playerBust) {
+            std::cout << "You went bust!\n";
+            return true; // Dealer wins
+        }
+
+        std::cout<<"(h) to hit, or (s) to stand: ";
+        char menu{};
+        std::cin>>menu;
+
+        if(!std::cin || (menu != 'h' && menu != 's')){
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "\nInvalid input. Try again.\n";
+            continue;
+
+        }
+        if(menu = 's'){
+            break;
+        }
+
+        Card card = deck.dealCard();
+        player.score+= card.cardValue();
+        std::cout << "The player flips a " << card << ". They now have: " << player.score << '\n';
+    }
+
+    while(dealer.score < Settings::dealerStop){
+        Card card = deck.dealCard();
+        dealer.score += card.cardValue();
+        std::cout << "The dealer flips a " << card << ". They now have: " << dealer.score << '\n';
+    }
+
+    if(dealer.score>Settings::playerBust){
+        std::cout << "The dealer went bust!\n";
+        return false;
+    }
+
+    return true; 
+}
+
+int main()
+{
+    Deck deck{};
+    bool dealerWins = blackjack(deck);
+    if(dealerWins){
+        std::cout << "you lose!\n";
+    } else{
+        std::cout << "You win!\n";
+    }
+
+    return 0;
+}   
