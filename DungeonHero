@@ -74,17 +74,124 @@ enum Type{
 
 };
 
-void attackMonster(Player& p, Monster& m){
-	std::cout << "You hit the " << m.getName() << " for " << p.getDamage() << " damage.\n";
-			m.reduceHealth(p.getDamage());
-			if (m.isDead()){
-				std::cout << "You killed the " << m.getName() << '\n';
-				p.levelUp();
-				p.addGold(m.getGold());
-				std::cout << "You have encountered " << m.getGold() << " gold\n";
-				std::cout << "You are now level " << p.getLevel() << '\n';
-	}
+class Potion {
+public:
+
+	enum Type{
+		health,
+		strength,
+		poison,
+		max_types,
+	};
+
+	enum Effect{
+		small,
+		medium, 
+		large,
+		mythical,
+		max_effects,
+	};
+		Potion(Type type, Effect effect)
+			:m_type{type}, m_effect{effect}
+			{
+			}
+
+		Type getType() const { return m_type; }
+		Effect getEffect() const { return m_effect; }
+
+		static Potion getRandomPotion()
+		{
+			Type type{ static_cast<Type>(Random::get(0, static_cast<int>(Type::max_types) - 1)) };
+			Effect size{ static_cast<Effect>(Random::get(0, static_cast<int>(Effect::max_effects) - 1)) };
+			return Potion{type, size};
+		}
+
+private:
+	Type m_type;
+	Effect m_effect;
+
+};
+
+void applyPotion(Player& player, const Potion& potion){
+    using Type = Potion::Type;
+	using Effect = Potion::Effect;
+
+    // Apply effect based on potion type
+    switch (potion.getType())
+    {
+        case Type::health:
+            if (potion.getEffect() == Effect::large)
+                player.reduceHealth(-5); // Gain 5 health
+            else
+                player.reduceHealth(-2); // Gain 2 health
+            std::cout << "You gained health!\n";
+            break;
+
+        case Type::strength:
+            player.levelUp(); // Simple way to simulate strength = +1 damage
+            std::cout << "You gained strength!\n";
+            break;
+
+        case Type::poison:
+            player.reduceHealth(1); // Lose health
+            std::cout << "You were poisoned!\n";
+            break;
+    }
 }
+
+void attackMonster(Player& p, Monster& m)
+{
+    std::cout << "You hit the " << m.getName() << " for " << p.getDamage() << " damage.\n";
+    m.reduceHealth(p.getDamage());
+
+    if (m.isDead())
+    {
+        std::cout << "You killed the " << m.getName() << '\n';
+        p.levelUp();
+        p.addGold(m.getGold());
+        std::cout << "You found " << m.getGold() << " gold\n";
+        std::cout << "You are now level " << p.getLevel() << '\n';
+
+        // POTION SECTION (new)
+        if (Random::get(1, 100) <= 30) // 30% chance
+        {
+            std::cout << "You found a mythical potion! Do you want to drink it? [y/n]: ";
+            char drink{};
+            std::cin >> drink;
+            drink = std::tolower(drink);
+
+            if (drink == 'y')
+            {
+                Potion potion{ Potion::getRandomPotion() };
+
+                // Announce potion
+                switch (potion.getEffect())
+                {
+                    case Potion::small: std::cout << "You drank a Small "; break;
+                    case Potion::medium: std::cout << "You drank a Medium "; break;
+                    case Potion::large: std::cout << "You drank a Large "; break;
+                    case Potion::mythical: std::cout << "You drank a Mythical "; break;
+                    default: break;
+                }
+
+                switch (potion.getType())
+                {
+                    case Potion::health: std::cout << "potion of Health.\n"; break;
+                    case Potion::strength: std::cout << "potion of Strength.\n"; break;
+                    case Potion::poison: std::cout << "potion of Poison.\n"; break;
+                    default: break;
+                }
+
+                applyPotion(p, potion);
+            }
+            else
+            {
+                std::cout << "You chose not to drink the potion.\n";
+            }
+        }
+    }
+}
+
 
 void attackPlayer(Player& p, Monster& m){
 	std::cout << "The " << m.getName() << " hit you for " << m.getDamage() << '\n';
@@ -149,6 +256,11 @@ int main()
 
 	Player p{ playerName };
 	std::cout << "Welcome, " << p.getName() << ".\n";
+
+	gameLoop(p);
+
+	return 0;
+}
 
 	gameLoop(p);
 
