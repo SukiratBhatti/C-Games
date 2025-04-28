@@ -1,0 +1,125 @@
+//after 'finishing' learncpp.
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <ctime>
+#include <cstdlib>
+#include <random>
+
+using namespace std;
+
+struct Card {
+    string suit;
+    string rank;
+};
+
+vector<string> suits = {"Hearts", "Diamonds", "Clubs", "Spades"};
+vector<string> ranks = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+
+vector<Card> createDeck() {
+    vector<Card> deck;
+    for (const auto& suit : suits) {
+        for (const auto& rank : ranks) {
+            deck.push_back({suit, rank});
+        }
+    }
+    random_device rd;
+    mt19937 g(rd());
+    shuffle(deck.begin(), deck.end(), g);
+    return deck;
+}
+
+void printHand(const vector<Card>& hand) {
+    for (size_t i = 0; i < hand.size(); ++i) {
+        cout << i + 1 << ") " << hand[i].rank << " of " << hand[i].suit << endl;
+    }
+}
+
+bool canPlay(const Card& card, const Card& topCard) {
+    return (card.rank == topCard.rank || card.suit == topCard.suit || card.rank == "8");
+}
+
+int main() {
+    srand(time(0));
+    vector<Card> deck = createDeck();
+    vector<Card> playerHand(deck.begin(), deck.begin() + 5);
+    vector<Card> computerHand(deck.begin() + 5, deck.begin() + 10);
+    deck.erase(deck.begin(), deck.begin() + 10);
+
+    Card topCard = deck.back();
+    deck.pop_back();
+
+    while (true) {
+        cout << "\nTop card: " << topCard.rank << " of " << topCard.suit << endl;
+
+        // Player Turn
+        cout << "\nYour hand:" << endl;
+        printHand(playerHand);
+
+        bool played = false;
+        for (size_t i = 0; i < playerHand.size(); ++i) {
+            if (canPlay(playerHand[i], topCard)) {
+                cout << "You can play card " << i + 1 << ". Enter the number to play it, or 0 to draw: ";
+                int choice;
+                cin >> choice;
+
+                if (choice == 0) break;
+
+                if (choice >= 1 && choice <= static_cast<int>(playerHand.size()) && canPlay(playerHand[choice - 1], topCard)) {
+                    topCard = playerHand[choice - 1];
+                    playerHand.erase(playerHand.begin() + (choice - 1));
+                    played = true;
+                    break;
+                } else {
+                    cout << "Invalid move. Try again.\n";
+                }
+            }
+        }
+
+        if (!played) {
+            if (!deck.empty()) {
+                cout << "You draw a card.\n";
+                playerHand.push_back(deck.back());
+                deck.pop_back();
+            } else {
+                cout << "Deck is empty.\n";
+            }
+        }
+
+        if (playerHand.empty()) {
+            cout << "\nYou win!" << endl;
+            break;
+        }
+
+        // Computer Turn
+        cout << "\nComputer's turn..." << endl;
+        played = false;
+        for (size_t i = 0; i < computerHand.size(); ++i) {
+            if (canPlay(computerHand[i], topCard)) {
+                topCard = computerHand[i];
+                computerHand.erase(computerHand.begin() + i);
+                cout << "Computer played a card." << endl;
+                played = true;
+                break;
+            }
+        }
+
+        if (!played) {
+            if (!deck.empty()) {
+                computerHand.push_back(deck.back());
+                deck.pop_back();
+                cout << "Computer drew a card." << endl;
+            } else {
+                cout << "Deck is empty." << endl;
+            }
+        }
+
+        if (computerHand.empty()) {
+            cout << "\nComputer wins!" << endl;
+            break;
+        }
+    }
+
+    return 0;
+}
